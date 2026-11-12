@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>HIITトーニング タイマー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Noto+Sans+JP:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1113;
+    --surface:#1a1d20;
+    --surface2:#24282c;
+    --line:#2e3338;
+    --text:#f5f5f2;
+    --muted:#9aa3ab;
+    --work:#ff5a1f;
+    --work-soft:#ff5a1f22;
+    --rest:#00c896;
+    --rest-soft:#00c89622;
+    --prep:#ffb020;
+    --prep-soft:#ffb02022;
+    --accent:var(--work);
+    --accent-soft:var(--work-soft);
+    --ring-bg:#2a2e33;
+    --btn:#fff;
+    --btn-text:#111;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f4f3ef;
+      --surface:#ffffff;
+      --surface2:#eceae4;
+      --line:#e2ded4;
+      --text:#16181a;
+      --muted:#6b7280;
+      --ring-bg:#e7e3da;
+      --btn:#16181a;
+      --btn-text:#fff;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Noto Sans JP",system-ui,-apple-system,Segoe UI,sans-serif;
+    background:var(--bg); color:var(--text);
+    min-height:100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, input{font:inherit}
+  button{min-height:48px}
+  .app{
+    max-width:520px; margin:0 auto; min-height:100dvh;
+    display:flex; flex-direction:column;
+    padding: env(safe-area-inset-top,0) 18px calc(18px + env(safe-area-inset-bottom,0));
+  }
+
+  /* Header row */
+  .topbar{display:flex; justify-content:space-between; align-items:center; padding:14px 2px 6px}
+  .topbar h1{font-size:15px; letter-spacing:.14em; font-weight:900; margin:0}
+  .topbar h1 span{color:var(--work)}
+  .total-time{font-size:13px; color:var(--muted); font-weight:700; font-variant-numeric:tabular-nums; background:var(--surface); border:1px solid var(--line); padding:7px 10px; border-radius:999px}
+  .total-time b{color:var(--text)}
+
+  /* Phase banner */
+  .phase-wrap{text-align:center; margin-top:8px}
+  .phase-label{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:"Barlow Condensed","Noto Sans JP",sans-serif;
+    font-size:28px; letter-spacing:.22em; font-weight:800; line-height:1;
+    padding:10px 18px 8px; border-radius:999px;
+    background:var(--accent-soft); color:var(--accent);
+    border:1.5px solid var(--accent);
+    min-width:168px; justify-content:center;
+  }
+  .phase-label .dot{width:9px;height:9px;border-radius:50%;background:var(--accent); animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion: reduce){ .phase-label .dot{animation:none} }
+  .set-label{margin-top:10px; font-size:14px; font-weight:800; letter-spacing:.08em; color:var(--muted)}
+  .set-label b{color:var(--text); font-size:16px}
+
+  /* Ring timer */
+  .timer-area{position:relative; width:min(78vw,340px); aspect-ratio:1; margin:14px auto 4px}
+  .timer-area svg{width:100%;height:100%;transform:rotate(-90deg);display:block}
+  .ring-bg{fill:none; stroke:var(--ring-bg); stroke-width:10}
+  .ring-fg{fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; transition:stroke .3s}
+  .timer-center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:12px}
+  .time-big{
+    font-family:"Barlow Condensed",sans-serif; font-weight:800;
+    font-size:clamp(84px,22vw,118px); line-height:.9; letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .next-label{margin-top:8px; font-size:13px; color:var(--muted); font-weight:700}
+  .next-label b{color:var(--text)}
+
+  /* Set dots */
+  .dots{display:flex; justify-content:center; gap:6px; flex-wrap:wrap; padding:10px 12px 2px; max-width:340px; margin:0 auto}
+  .dots i{width:22px;height:6px;border-radius:999px;background:var(--ring-bg); display:block}
+  .dots i.done{background:var(--accent)}
+  .dots i.now{background:var(--accent); opacity:.55; animation:pulse 1s infinite}
+
+  /* Overall progress */
+  .overall{height:6px; background:var(--ring-bg); border-radius:999px; overflow:hidden; margin:14px 4px 0}
+  .overall i{display:block;height:100%;width:0%;background:var(--text); border-radius:999px; transition:width .2s linear}
+
+  /* Controls */
+  .controls{display:flex; gap:10px; margin-top:18px}
+  .btn{
+    border:none; cursor:pointer; border-radius:16px; font-weight:900; letter-spacing:.02em;
+    display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap;
+  }
+  .preset b{white-space:nowrap; font-size:13.5px}
+  .btn-main{flex:1.6; background:var(--accent); color:#fff; font-size:19px; padding:16px 10px; box-shadow:0 10px 24px -10px var(--accent)}
+  .btn-main.paused{background:var(--text); color:var(--bg)}
+  .btn-sub{flex:1; background:var(--surface); color:var(--text); border:1px solid var(--line); font-size:15px; padding:14px 8px}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.4; pointer-events:none}
+  .sub-controls{display:flex; gap:10px; margin-top:10px}
+  .btn-ghost{flex:1; background:transparent; color:var(--muted); border:1px solid var(--line); font-size:14px; padding:10px}
+
+  /* Settings */
+  .section-title{font-size:12px; letter-spacing:.16em; font-weight:900; color:var(--muted); margin:26px 2px 10px; display:flex; justify-content:space-between; align-items:center}
+  .presets{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .preset{
+    background:var(--surface); border:1.5px solid var(--line); color:var(--text);
+    border-radius:14px; padding:12px 8px; cursor:pointer; text-align:center; position:relative;
+  }
+  .preset b{display:block; font-size:14.5px; white-space:normal; line-height:1.3}
+  .preset span{display:block; font-size:11.5px; color:var(--muted); margin-top:3px; font-weight:700; line-height:1.45}
+  .preset.active{border-color:var(--work); background:var(--work-soft)}
+  .preset.active span{color:var(--work)}
+  .preset .edit-badge{
+    position:absolute; top:6px; right:6px; font-size:10px; font-weight:900; letter-spacing:.04em;
+    background:var(--text); color:var(--bg); border-radius:999px; padding:3px 8px; display:none;
+  }
+  body.editing-presets .preset .edit-badge{display:block}
+  body.editing-presets .preset{border-style:dashed}
+  .edit-toggle{
+    border:1px solid var(--line); background:var(--surface); color:var(--text);
+    border-radius:999px; padding:7px 14px; font-size:12px; font-weight:900; cursor:pointer; min-height:36px; letter-spacing:0;
+  }
+  .edit-toggle.on{background:var(--text); color:var(--bg); border-color:var(--text)}
+  .add-preset-btn{
+    width:100%; margin-top:8px; border:1.5px dashed var(--line); background:transparent; color:var(--muted);
+    border-radius:14px; padding:12px; font-size:13.5px; font-weight:900; cursor:pointer; display:none;
+  }
+  body.editing-presets .add-preset-btn{display:block}
+  .preset-editor{
+    display:none; margin-top:10px; background:var(--surface); border:1.5px solid var(--work);
+    border-radius:18px; padding:16px 14px 14px;
+  }
+  .preset-editor.show{display:block}
+  .preset-editor h3{margin:0 0 4px; font-size:15px}
+  .preset-editor p.hint{margin:0 0 12px; font-size:12px; color:var(--muted); font-weight:600; line-height:1.6}
+  .pe-field{margin-bottom:12px}
+  .pe-field label{display:block; font-size:12.5px; font-weight:900; margin-bottom:6px}
+  .pe-field label small{color:var(--muted); font-weight:700}
+  .pe-field input[type="text"]{
+    width:100%; border:1px solid var(--line); background:var(--bg); color:var(--text);
+    border-radius:12px; padding:12px; font-size:16px; font-weight:700; min-height:48px;
+  }
+  .pe-numrow{display:flex; align-items:center; gap:8px}
+  .pe-numrow input[type="number"]{
+    flex:1; min-width:0; border:1px solid var(--line); background:var(--bg); color:var(--text);
+    border-radius:12px; padding:12px; font-size:17px; font-weight:800; text-align:center; min-height:48px;
+    font-variant-numeric:tabular-nums;
+  }
+  .pe-numrow .pe-unit{font-size:13px; color:var(--muted); font-weight:800; white-space:nowrap; min-width:64px}
+  .pe-actions{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap}
+  .pe-save{flex:1.4; background:var(--work); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:15px; padding:13px 8px; cursor:pointer}
+  .pe-cancel{flex:1; background:var(--surface2); color:var(--text); border:1px solid var(--line); border-radius:12px; font-weight:900; font-size:14px; padding:13px 8px; cursor:pointer}
+  .pe-delete{flex:1; background:transparent; color:#e5484d; border:1px solid #e5484d66; border-radius:12px; font-weight:900; font-size:14px; padding:13px 8px; cursor:pointer}
+  .pe-msg{font-size:12.5px; font-weight:800; color:var(--rest); margin-top:10px; min-height:18px; text-align:center}
+
+  .settings{display:flex; flex-direction:column; gap:10px; margin-top:12px}
+  .setting{
+    background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:14px 14px 12px;
+  }
+  .setting-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px}
+  .setting-head label{font-weight:800; font-size:15px}
+  .setting-head label small{display:block; font-size:11px; color:var(--muted); font-weight:700; margin-top:1px}
+  .stepper{display:flex; align-items:center; gap:6px}
+  .step-btn{
+    width:44px;height:44px; min-height:44px; border-radius:12px; border:1px solid var(--line);
+    background:var(--surface2); color:var(--text); font-size:22px; font-weight:800; cursor:pointer; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .step-val{min-width:92px; text-align:center; font-family:"Noto Sans JP",sans-serif; font-size:23px; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; white-space:nowrap}
+  .step-val small{font-size:14px; color:var(--muted); font-family:"Noto Sans JP",sans-serif; font-weight:700}
+  input[type=range]{width:100%; accent-color:var(--accent); height:32px; margin:2px 0 0; cursor:pointer}
+  .quick-row{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .chip{
+    border:1px solid var(--line); background:var(--bg); color:var(--muted);
+    padding:8px 12px; border-radius:999px; font-size:13px; font-weight:800; cursor:pointer; min-height:36px;
+  }
+  .chip.active{background:var(--text); color:var(--bg); border-color:var(--text)}
+
+  .toggles{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px}
+  .toggle{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px;
+    display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer; min-height:52px;
+  }
+  .toggle span{font-size:13px; font-weight:800; line-height:1.3}
+  .toggle span small{display:block; color:var(--muted); font-weight:600; font-size:11px}
+  .toggle input[type="checkbox"]{
+    appearance:none; -webkit-appearance:none; width:46px; height:28px; min-height:28px; border-radius:999px;
+    background:var(--ring-bg); position:relative; flex-shrink:0; transition:.2s; cursor:pointer; margin:0; border:none; padding:0;
+  }
+  .toggle input[type="checkbox"]::after{content:""; position:absolute; top:3px; left:3px; width:22px;height:22px;border-radius:50%;background:#fff; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .toggle input[type="checkbox"]:checked{background:var(--work)}
+  .toggle input[type="checkbox"]:checked::after{left:21px}
+
+  .save-status{
+    display:flex; align-items:center; gap:8px; margin-top:10px;
+    background:var(--rest-soft); border:1px solid var(--rest); color:var(--text);
+    border-radius:14px; padding:11px 13px; font-size:13px; font-weight:800; line-height:1.5;
+  }
+  .save-status .save-dot{width:9px;height:9px;border-radius:50%;background:var(--rest);flex-shrink:0}
+  .save-status small{display:block; color:var(--muted); font-weight:600; font-size:11.5px}
+  .backup-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px}
+  .backup-btn{
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    border-radius:14px; padding:12px 8px; font-size:13.5px; font-weight:900; cursor:pointer; min-height:52px; line-height:1.4;
+  }
+  .backup-btn small{display:block; font-size:11px; color:var(--muted); font-weight:700; margin-top:2px}
+  .backup-btn.danger{color:#e5484d; border-color:#e5484d66}
+  .backup-btn.danger.armed{background:#e5484d; color:#fff; border-color:#e5484d}
+  .backup-msg{font-size:12.5px; font-weight:800; color:var(--rest); margin-top:10px; min-height:18px; text-align:center; line-height:1.6}
+  .backup-msg.err{color:#e5484d}
+
+  .howto{
+    margin-top:22px; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:16px;
+  }
+  .howto h2{font-size:14px; margin:0 0 8px}
+  .howto ol{margin:0; padding-left:18px; color:var(--muted); font-size:13px; line-height:1.8; font-weight:600}
+  .howto ol b{color:var(--text)}
+  .finish-banner{
+    display:none; text-align:center; margin-top:16px; background:var(--rest-soft); border:1.5px solid var(--rest);
+    color:var(--rest); font-weight:900; border-radius:16px; padding:14px; font-size:16px;
+  }
+  .finish-banner.show{display:block}
+  .footer-note{text-align:center; color:var(--muted); font-size:11px; margin:18px 0 6px; line-height:1.7}
+
+  body.is-work{--accent:var(--work); --accent-soft:var(--work-soft)}
+  body.is-rest{--accent:var(--rest); --accent-soft:var(--rest-soft)}
+  body.is-prep{--accent:var(--prep); --accent-soft:var(--prep-soft)}
+  body.is-done{--accent:var(--rest); --accent-soft:var(--rest-soft)}
+
+  @media (min-width:640px){
+    .app{padding-top:10px}
+    .timer-area{width:360px}
+  }
+</style>
+</head>
+<body class="is-work">
+<div class="app">
+
+  <div class="topbar">
+    <h1>HIIT <span>TIMER</span></h1>
+    <div class="total-time">合計 <b id="totalTime">4:00</b></div>
+  </div>
+
+  <div class="phase-wrap">
+    <div class="phase-label" id="phaseLabel"><span class="dot"></span><span id="phaseText">READY</span></div>
+    <div class="set-label" id="setLabel">セット <b>1</b> / 8</div>
+  </div>
+
+  <div class="timer-area" aria-live="polite">
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+      <circle class="ring-bg" cx="100" cy="100" r="90"></circle>
+      <circle class="ring-fg" id="ring" cx="100" cy="100" r="90" stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
+    </svg>
+    <div class="timer-center">
+      <div class="time-big" id="timeBig">0:20</div>
+      <div class="next-label" id="nextLabel">次は <b>トレーニング 20秒</b></div>
+    </div>
+  </div>
+
+  <div class="dots" id="dots"></div>
+  <div class="overall"><i id="overallBar"></i></div>
+
+  <div class="controls">
+    <button class="btn btn-sub" id="resetBtn" type="button">↺ リセット</button>
+    <button class="btn btn-main" id="mainBtn" type="button">▶ スタート</button>
+    <button class="btn btn-sub" id="skipBtn" type="button">スキップ ⏭</button>
+  </div>
+  <div class="finish-banner" id="finishBanner">🎉 お疲れさまでした！ 全セット完了</div>
+
+  <div class="section-title"><span>プリセット</span><button class="edit-toggle" id="presetEditToggle" type="button">✎ プリセットを編集</button></div>
+  <p id="presetModeHint" style="margin:0 2px 10px; font-size:12px; color:var(--muted); font-weight:600; line-height:1.6">タップで即セットできます。「編集」を押すと、名前や時間・セット数を書き換えたり、自分のプリセットを追加できます。</p>
+  <div class="presets" id="presetList"></div>
+  <button class="add-preset-btn" id="addPresetBtn" type="button">＋ プリセットを追加（今の設定をコピー）</button>
+
+  <div class="preset-editor" id="presetEditor" aria-live="polite">
+    <h3 id="peTitle">プリセットを編集</h3>
+    <p class="hint">時間は「秒」で入力します。例：4分＝240秒、3分＝180秒、1分30秒＝90秒。保存すると上のボタンにすぐ反映され、このブラウザにも自動保存されます（次回開いても残ります）。</p>
+    <div class="pe-field">
+      <label for="peName">名前</label>
+      <input type="text" id="peName" maxlength="20" placeholder="例：マイHIIT">
+    </div>
+    <div class="pe-field">
+      <label for="peWork">🔥 トレーニング時間 <small>（秒）</small></label>
+      <div class="pe-numrow"><input type="number" id="peWork" min="5" max="600" step="5" inputmode="numeric"><span class="pe-unit" id="peWorkUnit">20秒</span></div>
+    </div>
+    <div class="pe-field">
+      <label for="peRest">💚 休憩時間 <small>（秒・0で休憩なし）</small></label>
+      <div class="pe-numrow"><input type="number" id="peRest" min="0" max="600" step="5" inputmode="numeric"><span class="pe-unit" id="peRestUnit">10秒</span></div>
+    </div>
+    <div class="pe-field">
+      <label for="peSets">🔁 セット数</label>
+      <div class="pe-numrow"><input type="number" id="peSets" min="1" max="30" step="1" inputmode="numeric"><span class="pe-unit">セット</span></div>
+    </div>
+    <div class="pe-field">
+      <label for="pePrep">⏳ 準備時間 <small>（秒）</small></label>
+      <div class="pe-numrow"><input type="number" id="pePrep" min="0" max="60" step="5" inputmode="numeric"><span class="pe-unit" id="pePrepUnit">10秒</span></div>
+    </div>
+    <div class="pe-actions">
+      <button class="pe-save" id="peSaveBtn" type="button">保存する</button>
+      <button class="pe-cancel" id="peCancelBtn" type="button">閉じる</button>
+      <button class="pe-delete" id="peDeleteBtn" type="button">削除</button>
+    </div>
+    <div class="pe-msg" id="peMsg"></div>
+  </div>
+
+  <div class="section-title"><span>カスタム設定</span></div>
+  <div class="settings">
+    <!-- WORK -->
+    <div class="setting">
+      <div class="setting-head">
+        <label>🔥 トレーニング時間<small>WORK — 動く時間</small></label>
+        <div class="stepper">
+          <button class="step-btn" type="button" data-target="work" data-delta="-5" aria-label="トレーニング時間を減らす">−</button>
+          <div class="step-val"><span id="workVal">20秒</span></div>
+          <button class="step-btn" type="button" data-target="work" data-delta="5" aria-label="トレーニング時間を増やす">＋</button>
+        </div>
+      </div>
+      <input type="range" id="workRange" min="5" max="600" step="5" value="20" aria-label="トレーニング時間">
+      <div class="quick-row" data-quick="work">
+        <button class="chip" type="button" data-val="20">20秒</button>
+        <button class="chip" type="button" data-val="30">30秒</button>
+        <button class="chip" type="button" data-val="40">40秒</button>
+        <button class="chip" type="button" data-val="60">1分</button>
+        <button class="chip" type="button" data-val="90">1分30秒</button>
+        <button class="chip" type="button" data-val="240">4分</button>
+      </div>
+    </div>
+
+    <!-- REST -->
+    <div class="setting">
+      <div class="setting-head">
+        <label>💚 休憩時間<small>REST — 休む時間</small></label>
+        <div class="stepper">
+          <button class="step-btn" type="button" data-target="rest" data-delta="-5" aria-label="休憩時間を減らす">−</button>
+          <div class="step-val"><span id="restVal">10秒</span></div>
+          <button class="step-btn" type="button" data-target="rest" data-delta="5" aria-label="休憩時間を増やす">＋</button>
+        </div>
+      </div>
+      <input type="range" id="restRange" min="0" max="600" step="5" value="10" aria-label="休憩時間">
+      <div class="quick-row" data-quick="rest">
+        <button class="chip" type="button" data-val="0">なし</button>
+        <button class="chip" type="button" data-val="10">10秒</button>
+        <button class="chip" type="button" data-val="20">20秒</button>
+        <button class="chip" type="button" data-val="30">30秒</button>
+        <button class="chip" type="button" data-val="60">1分</button>
+        <button class="chip" type="button" data-val="90">1分30秒</button>
+        <button class="chip" type="button" data-val="180">3分</button>
+      </div>
+    </div>
+
+    <!-- SETS -->
+    <div class="setting">
+      <div class="setting-head">
+        <label>🔁 セット数<small>何セット繰り返すか</small></label>
+        <div class="stepper">
+          <button class="step-btn" type="button" data-target="sets" data-delta="-1" aria-label="セット数を減らす">−</button>
+          <div class="step-val"><span id="setsVal">8</span><small> セット</small></div>
+          <button class="step-btn" type="button" data-target="sets" data-delta="1" aria-label="セット数を増やす">＋</button>
+        </div>
+      </div>
+      <input type="range" id="setsRange" min="1" max="30" step="1" value="8" aria-label="セット数">
+      <div class="quick-row" data-quick="sets">
+        <button class="chip" type="button" data-val="4">4</button>
+        <button class="chip" type="button" data-val="8">8</button>
+        <button class="chip" type="button" data-val="10">10</button>
+        <button class="chip" type="button" data-val="12">12</button>
+        <button class="chip" type="button" data-val="20">20</button>
+      </div>
+    </div>
+
+    <!-- PREP -->
+    <div class="setting">
+      <div class="setting-head">
+        <label>⏳ 準備時間<small>スタート前のカウントダウン</small></label>
+        <div class="stepper">
+          <button class="step-btn" type="button" data-target="prep" data-delta="-5" aria-label="準備時間を減らす">−</button>
+          <div class="step-val"><span id="prepVal">10秒</span></div>
+          <button class="step-btn" type="button" data-target="prep" data-delta="5" aria-label="準備時間を増やす">＋</button>
+        </div>
+      </div>
+      <input type="range" id="prepRange" min="0" max="60" step="5" value="10" aria-label="準備時間">
+    </div>
+  </div>
+
+  <div class="toggles">
+    <label class="toggle"><span>音でお知らせ<small>切り替え時にビープ音</small></span><input type="checkbox" id="soundToggle" checked aria-label="音でお知らせ"></label>
+    <label class="toggle"><span>バイブ<small>対応スマホのみ</small></span><input type="checkbox" id="vibeToggle" checked aria-label="バイブ"></label>
+  </div>
+
+  <div class="section-title"><span>保存・バックアップ</span></div>
+  <div class="save-status" role="status">
+    <span class="save-dot" aria-hidden="true"></span>
+    <span><span id="saveStatusText">自動保存：オン（このブラウザに保存します）</span><small>プリセット・カスタム設定・音／バイブのオンオフは、変更するたびに自動で保存され、次回開いたときに復元されます。保存先は「この端末の、このブラウザ」です。別の端末や別のブラウザには引き継がれません。</small></span>
+  </div>
+  <div class="backup-grid">
+    <button class="backup-btn" id="exportBtn" type="button">⬇ 設定をファイルに保存<small>プリセット一式をJSONで書き出し</small></button>
+    <button class="backup-btn" id="importBtn" type="button">⬆ ファイルから読み込む<small>書き出したJSONを復元</small></button>
+    <button class="backup-btn" id="standaloneBtn" type="button">📄 タイマー本体を保存<small>今の設定入りHTMLをダウンロード</small></button>
+    <button class="backup-btn danger" id="resetAllBtn" type="button">保存データを初期化<small>プリセットと設定を初期状態へ</small></button>
+  </div>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+  <div class="backup-msg" id="backupMsg" aria-live="polite"></div>
+
+  <div class="howto">
+    <h2>🌐 ブラウザで開く方法</h2>
+    <ol>
+      <li>スマホやPCのブラウザ（Safari / Chromeなど）で <b>Muse</b> を開き、ログインする</li>
+      <li>サイドバーのスペース一覧から <b>「HIITトーニング タイマー」</b> を開く — そのままブラウザの中でタイマーが使えます</li>
+      <li>よく使う場合は下の「ホーム画面に追加」をしておくと、次回からワンタップで開けます</li>
+    </ol>
+    <h2 style="margin-top:16px">📱 スマホでアプリみたいに使うには</h2>
+    <ol>
+      <li>このページをスマホのブラウザで開く</li>
+      <li><b>iPhone：</b>共有ボタン →「ホーム画面に追加」／ <b>Android：</b>メニュー →「ホーム画面に追加」</li>
+      <li>ホーム画面のアイコンから開くと、<b>全画面のアプリ風表示</b>で使えます</li>
+      <li>トレーニング中は画面が暗くならないよう、スタート時に自動でスリープ防止を試みます（対応ブラウザのみ）</li>
+    </ol>
+    <h2 style="margin-top:16px">🔒 Museが使えなくなっても使い続けるには</h2>
+    <ol>
+      <li>結論から言うと、<b>このページ自体はClaudeのスペース上で動いている</b>ので、Claudeのサービスが終わればこのページも開けなくなります。設定の自動保存も、このページを同じブラウザで開くことが前提です</li>
+      <li>ずっと自分のものとして持ちたい場合は、上の<b>「タイマー本体を保存」</b>でHTMLファイルをダウンロードしてください。この1ファイルにタイマー本体と今の設定が入っているので、<b>スマホやPCに置いてブラウザで開けば、Claudeなしでそのまま使えます</b>（ネット接続はフォント表示用のみで、タイマー自体は動きます）</li>
+      <li>設定だけのバックアップは<b>「設定をファイルに保存」</b>のJSONです。機種変更のときは、新しい端末でタイマーを開いて「ファイルから読み込む」で復元できます</li>
+    </ol>
+    <h2 style="margin-top:16px">🐙 GitHubで管理した方がいい？</h2>
+    <ol>
+      <li><b>普段使いだけなら不要です。</b>ダウンロードしたHTMLを端末に置くだけで十分で、アカウントも作らなくて済みます</li>
+      <li>GitHubが向いているのは、<b>URLでいつでも開ける自分専用ページが欲しい／バージョン管理したい／複数端末で同じファイルを置きたい</b>場合です。無料の <b>GitHub Pages</b> を使えば、ダウンロードしたHTMLを <b>index.html</b> という名前でリポジトリに置くだけで公開URLが作れます（リポジトリの Settings → Pages → Branch を main に設定）</li>
+      <li>注意点：GitHub Pagesで公開したページは<b>URLを知っている人が開ける</b>状態になります。タイマーだけのページなので実害はほぼありませんが、設定ファイル（JSON）はGitHubに置かないでください</li>
+      <li>迷ったら、まず<b>HTMLファイルをダウンロードして端末に保管</b>。それで不便を感じたらGitHub Pages、で十分です</li>
+    </ol>
+  </div>
+
+  <p class="footer-note">プリセットと設定は、この端末のブラウザに自動保存されます。ブラウザのデータを消去すると保存内容も消えるので、大事なプリセットは上の「設定をファイルに保存」でバックアップしてください。<br>音は最初の「スタート」を押した後に有効になります（ブラウザの仕様）。</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var CIRC = 565.48;
+  var limits = { work:[5,600], rest:[0,600], sets:[1,30], prep:[0,60] };
+  var DEFAULT_CFG = { work:20, rest:10, sets:8, prep:10 };
+  var DEFAULT_PRESETS = [
+    { name:"タバタ式", work:20, rest:10, sets:8, prep:10 },
+    { name:"しっかり追い込む", work:40, rest:20, sets:8, prep:10 },
+    { name:"初心者向け", work:30, rest:30, sets:10, prep:10 },
+    { name:"4x4", work:240, rest:180, sets:4, prep:10 },
+    { name:"SIT", work:30, rest:90, sets:6, prep:10 }
+  ];
+  function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
+  function clampVal(key, v, fallback){
+    var lim = limits[key]; var n = parseInt(v,10);
+    if(isNaN(n)) n = fallback;
+    return Math.max(lim[0], Math.min(lim[1], n));
+  }
+  function sanitizeCfg(c, fallback){
+    fallback = fallback || DEFAULT_CFG; c = c || {};
+    return {
+      work: clampVal("work", c.work, fallback.work),
+      rest: clampVal("rest", c.rest, fallback.rest),
+      sets: clampVal("sets", c.sets, fallback.sets),
+      prep: clampVal("prep", c.prep, fallback.prep)
+    };
+  }
+  function sanitizePreset(p){
+    if(!p || typeof p!=="object") return null;
+    var c = sanitizeCfg(p, { work:30, rest:15, sets:8, prep:10 });
+    c.name = (typeof p.name==="string" && p.name.trim()) ? p.name.trim().slice(0,20) : "マイプリセット";
+    return { name:c.name, work:c.work, rest:c.rest, sets:c.sets, prep:c.prep };
+  }
+  function sanitizeData(d){
+    if(!d || typeof d!=="object") return null;
+    var list = [];
+    if(Array.isArray(d.presets)){
+      d.presets.forEach(function(p){ var s = sanitizePreset(p); if(s) list.push(s); });
+    }
+    if(!list.length) list = clone(DEFAULT_PRESETS);
+    if(list.length>30) list = list.slice(0,30);
+    var ap = parseInt(d.activePreset,10);
+    if(isNaN(ap) || ap<0 || ap>=list.length) ap = -1;
+    return {
+      version: 1,
+      cfg: sanitizeCfg(d.cfg),
+      presets: list,
+      activePreset: ap,
+      sound: d.sound!==false,
+      vibe: d.vibe!==false
+    };
+  }
+
+  // ---------- Persistence (this browser only) + seed for standalone file ----------
+  var STORAGE_KEY = "hiit-timer-v1";
+  var storageOK = false;
+  try{
+    localStorage.setItem(STORAGE_KEY+"-test","1");
+    localStorage.removeItem(STORAGE_KEY+"-test");
+    storageOK = true;
+  }catch(e){ storageOK = false; }
+  function loadStored(){
+    if(storageOK){
+      try{
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){ var s = sanitizeData(JSON.parse(raw)); if(s) return s; }
+      }catch(e){}
+    }
+    if(typeof window.__HIIT_SEED__!=="undefined"){
+      var seeded = sanitizeData(window.__HIIT_SEED__);
+      if(seeded) return seeded;
+    }
+    return null;
+  }
+  var cfg = clone(DEFAULT_CFG);
+  var presets = clone(DEFAULT_PRESETS);
+  var activePreset = 0;
+  var initialSound = true, initialVibe = true;
+  var stored = loadStored();
+  if(stored){
+    cfg = stored.cfg;
+    presets = stored.presets;
+    activePreset = stored.activePreset;
+    initialSound = stored.sound;
+    initialVibe = stored.vibe;
+  }
+  var editingPreset = -1;
+  var presetEditMode = false;
+  function collectData(){
+    return {
+      version: 1,
+      cfg: clone(cfg),
+      presets: clone(presets),
+      activePreset: activePreset,
+      sound: els.soundToggle ? !!els.soundToggle.checked : initialSound,
+      vibe: els.vibeToggle ? !!els.vibeToggle.checked : initialVibe,
+      savedAt: new Date().toISOString()
+    };
+  }
+  function markSaved(){
+    var el = document.getElementById("saveStatusText");
+    if(!el) return;
+    if(!storageOK){
+      el.textContent = "自動保存：この環境では使えません（下のファイル保存を使ってください）";
+      return;
+    }
+    var now = new Date();
+    var hh = String(now.getHours()).padStart(2,"0"), mm = String(now.getMinutes()).padStart(2,"0"), ss = String(now.getSeconds()).padStart(2,"0");
+    el.textContent = "✓ 自動保存しました（" + hh + ":" + mm + ":" + ss + "）— 次回もこの設定で開きます";
+  }
+  function saveStored(){
+    if(!storageOK){ markSaved(); return; }
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(collectData())); markSaved(); }catch(e){ storageOK = false; markSaved(); }
+  }
+
+  var state = {
+    phase: "idle", // idle | prep | work | rest | done | paused-from stored separately
+    pausedFrom: null,
+    running: false,
+    currentSet: 1,
+    phaseTotal: 0,
+    phaseEndAt: 0,
+    remainingWhenPaused: 0,
+    lastWholeSec: null,
+    raf: null,
+    wakeLock: null
+  };
+
+  var els = {};
+  ["phaseText","phaseLabel","setLabel","timeBig","nextLabel","ring","dots","overallBar","mainBtn","resetBtn","skipBtn","totalTime","finishBanner","soundToggle","vibeToggle"].forEach(function(id){ els[id]=document.getElementById(id); });
+  els.soundToggle.checked = initialSound;
+  els.vibeToggle.checked = initialVibe;
+  els.soundToggle.addEventListener("change", saveStored);
+  els.vibeToggle.addEventListener("change", saveStored);
+
+  // ---------- Audio ----------
+  var audioCtx = null;
+  function ensureAudio(){
+    if(!els.soundToggle.checked) return null;
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==="suspended") audioCtx.resume();
+      return audioCtx;
+    }catch(e){ return null; }
+  }
+  function beep(freq, dur, delay, vol){
+    var ctx = ensureAudio(); if(!ctx) return;
+    var t = ctx.currentTime + (delay||0);
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type="sine"; o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol||0.22, t+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t+dur+0.05);
+  }
+  function vibrate(pattern){
+    if(els.vibeToggle.checked && navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} }
+  }
+  function cueCountdown(){ beep(880,0.12,0); }
+  function cuePhase(isWork){
+    if(isWork){ beep(660,0.14,0); beep(990,0.22,0.16); }
+    else { beep(520,0.16,0); beep(390,0.22,0.18); }
+    vibrate(isWork ? [80,40,80] : [120]);
+  }
+  function cueFinish(){
+    beep(659,0.16,0); beep(784,0.16,0.18); beep(1046,0.34,0.36);
+    vibrate([120,60,120,60,240]);
+  }
+
+  // ---------- Wake lock ----------
+  function requestWake(){
+    if("wakeLock" in navigator){
+      navigator.wakeLock.request("screen").then(function(wl){ state.wakeLock=wl; }).catch(function(){});
+    }
+  }
+  function releaseWake(){
+    if(state.wakeLock){ try{ state.wakeLock.release(); }catch(e){} state.wakeLock=null; }
+  }
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState==="visible" && state.running) requestWake();
+  });
+
+  // ---------- Format ----------
+  function fmt(sec){
+    sec = Math.max(0, Math.ceil(sec));
+    var m = Math.floor(sec/60), s = sec%60;
+    return m + ":" + String(s).padStart(2,"0");
+  }
+  function fmtDur(sec){
+    sec = Math.round(sec);
+    if(sec<=0) return "なし";
+    if(sec<60) return sec + "秒";
+    var m = Math.floor(sec/60), s = sec%60;
+    if(s===0) return m + "分";
+    return m + "分" + s + "秒";
+  }
+  function totalSeconds(){
+    var t = cfg.prep + cfg.work*cfg.sets + (cfg.sets>1 ? cfg.rest*(cfg.sets-1) : 0);
+    return t;
+  }
+  function elapsedTotal(){
+    // seconds already completed (excluding current phase remainder)
+    var done = 0;
+    if(state.phase==="idle") return 0;
+    if(state.phase==="done") return totalSeconds();
+    if(state.phase!=="prep") done += cfg.prep;
+    if(state.phase==="work" || state.phase==="rest"){
+      done += (state.currentSet-1)*(cfg.work+cfg.rest);
+      if(state.phase==="rest") done += cfg.work;
+    }
+    var remain = state.running ? Math.max(0,(state.phaseEndAt-Date.now())/1000) : state.remainingWhenPaused;
+    done += (state.phaseTotal - remain);
+    return Math.max(0, Math.min(totalSeconds(), done));
+  }
+
+  // ---------- Settings UI ----------
+  function syncSettingUI(){
+    document.getElementById("workVal").textContent = fmtDur(cfg.work);
+    document.getElementById("restVal").textContent = fmtDur(cfg.rest);
+    document.getElementById("setsVal").textContent = cfg.sets;
+    document.getElementById("prepVal").textContent = fmtDur(cfg.prep);
+    document.getElementById("workRange").value = cfg.work;
+    document.getElementById("restRange").value = cfg.rest;
+    document.getElementById("setsRange").value = cfg.sets;
+    document.getElementById("prepRange").value = cfg.prep;
+    els.totalTime.textContent = fmt(totalSeconds());
+    document.querySelectorAll(".quick-row").forEach(function(row){
+      var key = row.getAttribute("data-quick");
+      row.querySelectorAll(".chip").forEach(function(ch){
+        ch.classList.toggle("active", parseInt(ch.getAttribute("data-val"),10)===cfg[key]);
+      });
+    });
+    buildDots();
+  }
+  function setCfg(key, val){
+    var lim = limits[key];
+    // bigger steps for long intervals so the +/- buttons stay practical
+    cfg[key] = Math.max(lim[0], Math.min(lim[1], Math.round(val)));
+    activePreset = -1;
+    renderPresets();
+    syncSettingUI();
+    saveStored();
+    if(state.phase==="idle" || state.phase==="done") resetTimer(false);
+  }
+  function buildDots(){
+    els.dots.innerHTML = "";
+    for(var i=1;i<=cfg.sets;i++){
+      var d = document.createElement("i");
+      if(state.phase==="done" || i < state.currentSet || (state.phase==="rest" && i===state.currentSet)) d.className="done";
+      else if(i===state.currentSet && (state.phase==="work")) d.className="now";
+      els.dots.appendChild(d);
+    }
+  }
+
+  document.querySelectorAll(".step-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var key = btn.getAttribute("data-target");
+      var delta = parseInt(btn.getAttribute("data-delta"),10);
+      if((key==="work" || key==="rest") && cfg[key]>=120) delta = delta*6; // 30秒ステップ（長い時間用）
+      setCfg(key, cfg[key] + delta);
+    });
+  });
+  [["work","workRange"],["rest","restRange"],["sets","setsRange"],["prep","prepRange"]].forEach(function(pair){
+    document.getElementById(pair[1]).addEventListener("input", function(e){ setCfg(pair[0], parseInt(e.target.value,10)); });
+  });
+  document.querySelectorAll(".quick-row .chip").forEach(function(ch){
+    ch.addEventListener("click", function(){
+      var key = ch.parentElement.getAttribute("data-quick");
+      setCfg(key, parseInt(ch.getAttribute("data-val"),10));
+    });
+  });
+  // ---------- Preset rendering & editing ----------
+  var presetListEl = document.getElementById("presetList");
+  var editorEl = document.getElementById("presetEditor");
+  var peEls = {
+    name: document.getElementById("peName"),
+    work: document.getElementById("peWork"),
+    rest: document.getElementById("peRest"),
+    sets: document.getElementById("peSets"),
+    prep: document.getElementById("pePrep"),
+    workUnit: document.getElementById("peWorkUnit"),
+    restUnit: document.getElementById("peRestUnit"),
+    prepUnit: document.getElementById("pePrepUnit"),
+    title: document.getElementById("peTitle"),
+    msg: document.getElementById("peMsg"),
+    del: document.getElementById("peDeleteBtn")
+  };
+  function presetSub(p){
+    return fmtDur(p.work) + " / " + (p.rest>0 ? fmtDur(p.rest) : "休憩なし") + " × " + p.sets + "セット";
+  }
+  function renderPresets(){
+    presetListEl.innerHTML = "";
+    presets.forEach(function(p, idx){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "preset" + (idx===activePreset ? " active" : "");
+      var badge = document.createElement("span");
+      badge.className = "edit-badge"; badge.textContent = "✎ 編集";
+      var name = document.createElement("b"); name.textContent = p.name;
+      var sub = document.createElement("span"); sub.textContent = presetSub(p);
+      b.appendChild(badge); b.appendChild(name); b.appendChild(sub);
+      b.addEventListener("click", function(){
+        if(presetEditMode){ openPresetEditor(idx); }
+        else { applyPreset(idx); }
+      });
+      presetListEl.appendChild(b);
+    });
+  }
+  function applyPreset(idx){
+    var p = presets[idx]; if(!p) return;
+    cfg.work = p.work; cfg.rest = p.rest; cfg.sets = p.sets; cfg.prep = p.prep;
+    activePreset = idx;
+    renderPresets();
+    syncSettingUI();
+    saveStored();
+    if(state.phase==="idle" || state.phase==="done") resetTimer(false);
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+  function peSyncUnits(){
+    var w = parseInt(peEls.work.value,10), r = parseInt(peEls.rest.value,10), pr = parseInt(peEls.prep.value,10);
+    peEls.workUnit.textContent = isNaN(w) ? "—" : fmtDur(w);
+    peEls.restUnit.textContent = isNaN(r) ? "—" : (r===0 ? "休憩なし" : fmtDur(r));
+    peEls.prepUnit.textContent = isNaN(pr) ? "—" : fmtDur(pr);
+  }
+  function openPresetEditor(idx){
+    editingPreset = idx;
+    var p = presets[idx]; if(!p) return;
+    peEls.title.textContent = "プリセットを編集：「" + p.name + "」";
+    peEls.name.value = p.name;
+    peEls.work.value = p.work; peEls.rest.value = p.rest;
+    peEls.sets.value = p.sets; peEls.prep.value = p.prep;
+    peEls.msg.textContent = "";
+    peEls.del.style.display = presets.length>1 ? "" : "none";
+    editorEl.classList.add("show");
+    peSyncUnits();
+    editorEl.scrollIntoView({behavior:"smooth", block:"nearest"});
+  }
+  function closePresetEditor(){
+    editingPreset = -1;
+    editorEl.classList.remove("show");
+  }
+  [peEls.work, peEls.rest, peEls.prep].forEach(function(inp){
+    inp.addEventListener("input", peSyncUnits);
+  });
+  document.getElementById("presetEditToggle").addEventListener("click", function(){
+    presetEditMode = !presetEditMode;
+    document.body.classList.toggle("editing-presets", presetEditMode);
+    this.classList.toggle("on", presetEditMode);
+    this.textContent = presetEditMode ? "✓ 編集を終わる" : "✎ プリセットを編集";
+    document.getElementById("presetModeHint").textContent = presetEditMode
+      ? "編集モード：書き換えたいプリセットをタップしてください。下の「＋追加」から自分のプリセットも作れます。"
+      : "タップで即セットできます。「編集」を押すと、名前や時間・セット数を書き換えたり、自分のプリセットを追加できます。";
+    if(!presetEditMode) closePresetEditor();
+  });
+  document.getElementById("addPresetBtn").addEventListener("click", function(){
+    presets.push({ name:"マイプリセット " + presets.length, work:cfg.work, rest:cfg.rest, sets:cfg.sets, prep:cfg.prep });
+    renderPresets();
+    saveStored();
+    openPresetEditor(presets.length-1);
+  });
+  document.getElementById("peCancelBtn").addEventListener("click", closePresetEditor);
+  document.getElementById("peSaveBtn").addEventListener("click", function(){
+    if(editingPreset<0 || !presets[editingPreset]) return;
+    function clampNum(inp, min, max, fallback){
+      var v = parseInt(inp.value,10);
+      if(isNaN(v)) v = fallback;
+      return Math.max(min, Math.min(max, v));
+    }
+    var name = peEls.name.value.trim() || "マイプリセット";
+    presets[editingPreset] = {
+      name: name,
+      work: clampNum(peEls.work, limits.work[0], limits.work[1], 30),
+      rest: clampNum(peEls.rest, limits.rest[0], limits.rest[1], 15),
+      sets: clampNum(peEls.sets, limits.sets[0], limits.sets[1], 8),
+      prep: clampNum(peEls.prep, limits.prep[0], limits.prep[1], 10)
+    };
+    var wasActive = (editingPreset===activePreset);
+    if(wasActive){
+      var saved = presets[editingPreset];
+      cfg.work = saved.work; cfg.rest = saved.rest; cfg.sets = saved.sets; cfg.prep = saved.prep;
+      syncSettingUI();
+      if(state.phase==="idle" || state.phase==="done") resetTimer(false);
+    }
+    renderPresets();
+    saveStored();
+    peEls.msg.textContent = "✓ 保存しました：「" + name + "」" + (wasActive ? " — タイマーにも反映しました" : " — タップするとタイマーにセットされます");
+    peEls.title.textContent = "プリセットを編集：「" + name + "」";
+  });
+  peEls.del.addEventListener("click", function(){
+    if(editingPreset<0 || presets.length<=1) return;
+    var removedName = presets[editingPreset].name;
+    presets.splice(editingPreset,1);
+    if(activePreset===editingPreset) activePreset = -1;
+    else if(activePreset>editingPreset) activePreset--;
+    closePresetEditor();
+    renderPresets();
+    saveStored();
+    document.getElementById("presetModeHint").textContent = "「" + removedName + "」を削除しました。編集を続けるにはプリセットをタップしてください。";
+  });
+
+  // ---------- Timer core ----------
+  function setBodyPhase(){
+    document.body.classList.remove("is-work","is-rest","is-prep","is-done");
+    if(state.phase==="work"||state.phase==="idle") document.body.classList.add("is-work");
+    else if(state.phase==="rest") document.body.classList.add("is-rest");
+    else if(state.phase==="prep") document.body.classList.add("is-prep");
+    else if(state.phase==="done") document.body.classList.add("is-done");
+  }
+  function phaseName(){
+    if(state.phase==="prep") return "READY…";
+    if(state.phase==="work") return "WORK 🔥";
+    if(state.phase==="rest") return "REST 💚";
+    if(state.phase==="done") return "FINISH 🎉";
+    return "READY";
+  }
+  function nextText(){
+    if(state.phase==="idle") return "次は <b>トレーニング " + fmtDur(cfg.work) + "</b>";
+    if(state.phase==="prep") return "次は <b>トレーニング " + fmtDur(cfg.work) + "</b>";
+    if(state.phase==="work"){
+      if(state.currentSet >= cfg.sets) return "これが <b>ラストセット！</b>";
+      return cfg.rest>0 ? "次は <b>休憩 " + fmtDur(cfg.rest) + "</b>" : "次は <b>そのまま次のセット</b>";
+    }
+    if(state.phase==="rest") return "次は <b>トレーニング " + fmtDur(cfg.work) + "</b>";
+    if(state.phase==="done") return "<b>全セット完了</b> — お疲れさまでした";
+    return "";
+  }
+  function render(remainSec){
+    els.phaseText.textContent = phaseName();
+    els.setLabel.innerHTML = state.phase==="done"
+      ? "セット <b>" + cfg.sets + "</b> / " + cfg.sets + " 完了"
+      : "セット <b>" + Math.min(state.currentSet, cfg.sets) + "</b> / " + cfg.sets;
+    els.timeBig.textContent = fmt(remainSec);
+    els.nextLabel.innerHTML = nextText();
+    var frac = state.phaseTotal>0 ? Math.max(0, Math.min(1, remainSec/state.phaseTotal)) : 0;
+    els.ring.style.strokeDashoffset = String(CIRC * (1-frac));
+    var tot = totalSeconds();
+    els.overallBar.style.width = (tot>0 ? (elapsedTotal()/tot*100) : 0) + "%";
+    setBodyPhase();
+    buildDots();
+  }
+  function tick(){
+    if(!state.running) return;
+    var remain = (state.phaseEndAt - Date.now())/1000;
+    if(remain <= 0){ advancePhase(); return; }
+    var whole = Math.ceil(remain);
+    if(whole !== state.lastWholeSec){
+      state.lastWholeSec = whole;
+      if(whole<=3 && whole>=1) cueCountdown();
+    }
+    render(remain);
+    state.raf = requestAnimationFrame(tick);
+  }
+  function startPhase(phase, durSec){
+    state.phase = phase;
+    state.phaseTotal = durSec;
+    state.lastWholeSec = null;
+    state.phaseEndAt = Date.now() + durSec*1000;
+    state.remainingWhenPaused = durSec;
+    render(durSec);
+  }
+  function advancePhase(){
+    if(state.phase==="prep"){
+      cuePhase(true);
+      startPhase("work", cfg.work);
+    } else if(state.phase==="work"){
+      if(state.currentSet >= cfg.sets){
+        finishAll(); return;
+      }
+      if(cfg.rest>0){ cuePhase(false); startPhase("rest", cfg.rest); }
+      else { state.currentSet++; cuePhase(true); startPhase("work", cfg.work); }
+    } else if(state.phase==="rest"){
+      state.currentSet++;
+      cuePhase(true);
+      startPhase("work", cfg.work);
+    }
+    if(state.running) { state.raf = requestAnimationFrame(tick); }
+  }
+  function finishAll(){
+    state.phase="done"; state.running=false;
+    state.phaseTotal=1; state.remainingWhenPaused=0;
+    els.finishBanner.classList.add("show");
+    els.mainBtn.textContent = "↺ もう一度";
+    els.mainBtn.classList.remove("paused");
+    render(0);
+    cueFinish();
+    releaseWake();
+  }
+  function startTimer(){
+    ensureAudio();
+    els.finishBanner.classList.remove("show");
+    if(state.phase==="idle" || state.phase==="done"){
+      state.currentSet = 1;
+      if(cfg.prep>0) startPhase("prep", cfg.prep);
+      else { startPhase("work", cfg.work); cuePhase(true); }
+    } else {
+      // resume
+      state.phaseEndAt = Date.now() + state.remainingWhenPaused*1000;
+    }
+    state.running = true;
+    els.mainBtn.textContent = "⏸ 一時停止";
+    els.mainBtn.classList.add("paused");
+    requestWake();
+    state.raf = requestAnimationFrame(tick);
+  }
+  function pauseTimer(){
+    if(!state.running) return;
+    state.remainingWhenPaused = Math.max(0,(state.phaseEndAt-Date.now())/1000);
+    state.running = false;
+    if(state.raf) cancelAnimationFrame(state.raf);
+    els.mainBtn.textContent = "▶ 再開する";
+    els.mainBtn.classList.remove("paused");
+    releaseWake();
+    render(state.remainingWhenPaused);
+  }
+  function resetTimer(scrollTop){
+    state.running=false; state.phase="idle"; state.currentSet=1;
+    state.phaseTotal = cfg.work; state.remainingWhenPaused = cfg.work; state.lastWholeSec=null;
+    if(state.raf) cancelAnimationFrame(state.raf);
+    els.finishBanner.classList.remove("show");
+    els.mainBtn.textContent = "▶ スタート";
+    els.mainBtn.classList.remove("paused");
+    releaseWake();
+    render(cfg.work);
+    els.overallBar.style.width = "0%";
+  }
+
+  els.mainBtn.addEventListener("click", function(){
+    if(state.phase==="done"){ resetTimer(false); startTimer(); return; }
+    if(state.running) pauseTimer(); else startTimer();
+  });
+  els.resetBtn.addEventListener("click", function(){ resetTimer(false); });
+  els.skipBtn.addEventListener("click", function(){
+    if(state.phase==="idle" || state.phase==="done") return;
+    var wasRunning = state.running;
+    if(state.raf) cancelAnimationFrame(state.raf);
+    if(!wasRunning){
+      // skipping while paused: advance but stay paused on new phase
+      var prevRunning = state.running;
+      state.running = true; // allow advance logic, then re-pause below
+      advancePhase();
+      if(state.phase!=="done"){
+        state.running = false;
+        state.remainingWhenPaused = state.phaseTotal;
+        els.mainBtn.textContent = "▶ 再開する";
+        render(state.phaseTotal);
+      }
+      state.running = prevRunning;
+      return;
+    }
+    advancePhase();
+  });
+
+  // ---------- Backup: export / import / standalone / reset ----------
+  var backupMsgEl = document.getElementById("backupMsg");
+  function backupMsg(text, isErr){
+    backupMsgEl.textContent = text || "";
+    backupMsgEl.classList.toggle("err", !!isErr);
+  }
+  function downloadBlob(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    var json = JSON.stringify(collectData(), null, 2);
+    downloadBlob(new Blob([json], {type:"application/json"}), "hiit-timer-settings.json");
+    backupMsg("✓ 設定ファイルをダウンロードしました。機種変更やバックアップに使えます。", false);
+  });
+  var importFileEl = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click", function(){ importFileEl.click(); });
+  importFileEl.addEventListener("change", function(){
+    var file = importFileEl.files && importFileEl.files[0];
+    importFileEl.value = "";
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = sanitizeData(JSON.parse(String(reader.result)));
+        if(!data) throw new Error("bad file");
+        cfg = data.cfg; presets = data.presets; activePreset = data.activePreset;
+        els.soundToggle.checked = data.sound; els.vibeToggle.checked = data.vibe;
+        closePresetEditor();
+        renderPresets(); syncSettingUI(); resetTimer(false); saveStored();
+        backupMsg("✓ ファイルから復元しました：" + presets.length + "件のプリセットを読み込みました。", false);
+      }catch(e){
+        backupMsg("読み込めませんでした。書き出した設定ファイル（JSON）を選んでください。", true);
+      }
+    };
+    reader.onerror = function(){ backupMsg("ファイルの読み込みに失敗しました。", true); };
+    reader.readAsText(file);
+  });
+  document.getElementById("standaloneBtn").addEventListener("click", function(){
+    try{
+      var seedJson = JSON.stringify(collectData()).replace(/</g, "\\u003c");
+      var html = "<!doctype html>\n" + document.documentElement.outerHTML;
+      // Seed the current settings ahead of the main script so the saved file opens with them.
+      var marker = "<script>";
+      var at = html.indexOf(marker);
+      if(at>=0){
+        html = html.slice(0, at) + "<script>window.__HIIT_SEED__=" + seedJson + ";<\/script>" + html.slice(at);
+      }
+      downloadBlob(new Blob([html], {type:"text/html"}), "hiit-timer.html");
+      backupMsg("✓ タイマー本体（今の設定入り）をダウンロードしました。そのファイルをブラウザで開けばClaudeなしで使えます。GitHub Pagesに置くときはファイル名を index.html にしてください。", false);
+    }catch(e){
+      backupMsg("タイマー本体の保存に失敗しました。設定ファイルの保存をお試しください。", true);
+    }
+  });
+  var resetArmed = false, resetArmTimer = null;
+  var resetAllBtn = document.getElementById("resetAllBtn");
+  resetAllBtn.addEventListener("click", function(){
+    if(!resetArmed){
+      resetArmed = true;
+      resetAllBtn.classList.add("armed");
+      resetAllBtn.firstChild.textContent = "本当に初期化しますか？ ";
+      backupMsg("プリセットと設定がすべて初期状態に戻ります。続けるにはもう一度ボタンを押してください。", true);
+      resetArmTimer = setTimeout(function(){
+        resetArmed = false; resetAllBtn.classList.remove("armed");
+        resetAllBtn.firstChild.textContent = "保存データを初期化";
+      }, 5000);
+      return;
+    }
+    clearTimeout(resetArmTimer);
+    resetArmed = false; resetAllBtn.classList.remove("armed");
+    resetAllBtn.firstChild.textContent = "保存データを初期化";
+    if(storageOK){ try{ localStorage.removeItem(STORAGE_KEY); }catch(e){} }
+    cfg = clone(DEFAULT_CFG); presets = clone(DEFAULT_PRESETS); activePreset = 0;
+    els.soundToggle.checked = true; els.vibeToggle.checked = true;
+    closePresetEditor();
+    renderPresets(); syncSettingUI(); resetTimer(false); saveStored();
+    backupMsg("✓ 初期状態に戻しました（タバタ式がセットされています）。", false);
+  });
+
+  // init
+  renderPresets();
+  syncSettingUI();
+  resetTimer(false);
+  if(stored){
+    var stEl = document.getElementById("saveStatusText");
+    if(stEl) stEl.textContent = storageOK
+      ? "✓ 保存済みの設定を復元しました — 変更すると自動保存されます"
+      : "✓ 設定を復元しました（この環境では自動保存できないため、下のファイル保存を使ってください）";
+  }
+  else if(!storageOK) markSaved();
+})();
+</script>
+</body>
+</html>
